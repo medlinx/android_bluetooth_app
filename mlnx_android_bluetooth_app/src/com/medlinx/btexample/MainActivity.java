@@ -3,7 +3,14 @@ package com.medlinx.btexample;
 import java.text.DateFormat;
 import java.util.Date;
 
+import com.medlinx.ECGSignal;
+import com.medlinx.MlnxBTClient;
+import com.medlinx.MlnxEventListener;
+
+
+
 import mlnx.android.bluetooth.app.R;
+
 
 
 
@@ -39,8 +46,19 @@ public class MainActivity extends Activity {
     public static final int REQUEST_CONNECT_DEVICE = 1;
     public static final int REQUEST_ENABLE_BT = 2;
 	private ProgressDialog pro_dialog;
-    private BTExampleApp btClient;
 	
+//    private MlnxBTClient btClient = new MlnxBTClient(){
+//    	@Override
+//    	public void onECGSignalUpdate(ECGSignal ecg) {
+//    		float[][] data = ecg.getSignals();
+//    		String msg = "receive ecg data " + data.length + " points";
+//    		String currentDateTimeString = DateFormat.getDateTimeInstance().format(new Date());
+//            Log.i(TAG, currentDateTimeString + ":" + msg);
+//            status.setText(currentDateTimeString + ":" + msg);
+//    	}
+//    };
+	
+	private MlnxBTClient btClient = MlnxBTClient.getClient();
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +67,7 @@ public class MainActivity extends Activity {
 		switchButton = (ToggleButton) findViewById(R.id.switchButton);
 		status = (TextView) findViewById(R.id.status);
 		message = (TextView) findViewById(R.id.message);
-		btClient = (BTExampleApp) getApplication();
+		
 		switchButton.setOnClickListener(new OnClickListener(){
 
 			@Override
@@ -68,38 +86,69 @@ public class MainActivity extends Activity {
 		// bluetooth
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 		IntentFilter filter = new IntentFilter();
-        filter.addAction(BTExampleApp.BT_STATE_CHANGE_ACTION);
-        registerReceiver(stateCastReceiver, filter );
+        filter.addAction(MlnxBTClient.BT_STATE_CHANGE_ACTION);
+        registerReceiver(btStatetReceiver, filter );
         
-        LocalBroadcastManager.getInstance(this).registerReceiver(ecgDataReceiver, 
-        		new IntentFilter(BTExampleApp.ECG_RESULT));
-        
-        
+        btClient.setOnEventListener(new MlnxEventListener(){
+
+			@Override
+			public void onECGSignalUpdate(ECGSignal ecg) {
+				Log.i(TAG, "ECG signal updated");
+				float[][] data = ecg.getSignals();
+	    		final String msg = "receive ecg data " + data.length + " points";
+	    		final String currentDateTimeString = DateFormat.getDateTimeInstance().format(new Date());
+	            Log.i(TAG, currentDateTimeString + ":" + msg);
+	            runOnUiThread(new Runnable(){
+
+					@Override
+					public void run() {
+						status.setText(currentDateTimeString + ":" + msg);
+					}
+	            	
+	            });
+	            
+			}
+
+			@Override
+			public void onHeartRateUpdate(int heartrate) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void onBatteryRemainingChanged(int battery) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void onElectrodeChanged(int electrode) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void onAccelerationUpdate(int acceleration) {
+				// TODO Auto-generated method stub
+				
+			}
+        	
+        });
+               
 	}
 	
-	private BroadcastReceiver ecgDataReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String s = intent.getStringExtra(BTExampleApp.ECG_MSG);
-            // do something here.
-            String currentDateTimeString = DateFormat.getDateTimeInstance().format(new Date());
-            Log.i(TAG, currentDateTimeString + ":" + s);
-            status.setText(currentDateTimeString + ":" + s);
-        }
-    };
+
 	
     @Override
 	protected void onDestroy() {
-    	unregisterReceiver(stateCastReceiver);
-    	LocalBroadcastManager.getInstance(this).unregisterReceiver(ecgDataReceiver);
-		super.onDestroy();
+    	super.onDestroy();
 	}
 
 
 
 	@Override
 	protected void onResume() {
-		if(BTExampleApp.getBTServiceState(this) == BTExampleApp.BT_STATE_CONNECTED){
+		if(MlnxBTClient.getBTServiceState(this) == MlnxBTClient.BT_STATE_CONNECTED){
 			switchButton.setChecked(true);
 		}else
 			switchButton.setChecked(false);
@@ -118,18 +167,18 @@ public class MainActivity extends Activity {
 		
 	}	
     
-	private BroadcastReceiver stateCastReceiver = new BroadcastReceiver(){
+	private BroadcastReceiver btStatetReceiver = new BroadcastReceiver(){
 
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			if(intent.getAction().equals(BTExampleApp.BT_STATE_CHANGE_ACTION)){
-				int state = BTExampleApp.getBTServiceState(MainActivity.this);
+			if(intent.getAction().equals(MlnxBTClient.BT_STATE_CHANGE_ACTION)){
+				int state = MlnxBTClient.getBTServiceState(MainActivity.this);
 				String text = null;
 				switch (state) {
-                case BTExampleApp.BT_STATE_CONNECTED:
+                case MlnxBTClient.BT_STATE_CONNECTED:
                 	
-                	if(intent.hasExtra(BTExampleApp.BT_STATE_CHANGE_MSG))
-                		text = intent.getExtras().getString(BTExampleApp.BT_STATE_CHANGE_MSG); 
+                	if(intent.hasExtra(MlnxBTClient.BT_STATE_CHANGE_MSG))
+                		text = intent.getExtras().getString(MlnxBTClient.BT_STATE_CHANGE_MSG); 
             
                 		 
                 	Toast.makeText(getApplicationContext(), text,
@@ -140,19 +189,19 @@ public class MainActivity extends Activity {
                 	switchButton.setChecked(true);
                     break;
                     
-                case BTExampleApp.BT_STATE_CONNECTING:
+                case MlnxBTClient.BT_STATE_CONNECTING:
                 	showProgressDialog(getString(R.string.title_connecting),
                 			getString(R.string.msg_connecting));
                 	Log.i(TAG,"bluetooth connecting");
                     break;
                     
-                case BTExampleApp.BT_STATE_LISTEN:
-                case BTExampleApp.BT_STATE_NONE:
+                case MlnxBTClient.BT_STATE_LISTEN:
+                case MlnxBTClient.BT_STATE_NONE:
                 	if(pro_dialog != null)
                 		pro_dialog.dismiss();
                 	switchButton.setChecked(false);
-                	if(intent.hasExtra(BTExampleApp.BT_STATE_CHANGE_MSG))
-                		text = intent.getExtras().getString(BTExampleApp.BT_STATE_CHANGE_MSG); 
+                	if(intent.hasExtra(MlnxBTClient.BT_STATE_CHANGE_MSG))
+                		text = intent.getExtras().getString(MlnxBTClient.BT_STATE_CHANGE_MSG); 
                     
                 	if(text != null)
                 	{	
@@ -170,20 +219,22 @@ public class MainActivity extends Activity {
 
 	protected void disconnectBT() {
 		btClient.disconnect(this);
+		// Unregister Bluetooth receiver
+		unregisterReceiver(btStatetReceiver);
 	}
 	
 
 	protected void connectBT() {
 		Log.i(TAG, "connect bluetooth");
-
-//		disconnectBT();
+		// Register bluetooth state receiver
+		registerReceiver(btStatetReceiver, new IntentFilter(MlnxBTClient.BT_STATE_CHANGE_ACTION));
 		btClient.start(this);
 		
 		if ( (mBluetoothAdapter != null)  && (!mBluetoothAdapter.isEnabled()) ) {
 			Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
     		startActivityForResult(enableIntent, REQUEST_ENABLE_BT);			
 		}
-		else if (BTExampleApp.getBTServiceState(this) == BTExampleApp.BT_STATE_NONE) {
+		else if (MlnxBTClient.getBTServiceState(this) == MlnxBTClient.BT_STATE_NONE) {
     		// Launch the DeviceListActivity to see devices and do scan
     		Intent serverIntent = new Intent(this, DeviceListActivity.class);
     		startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE);
