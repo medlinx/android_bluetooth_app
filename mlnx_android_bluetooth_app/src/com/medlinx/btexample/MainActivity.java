@@ -6,6 +6,11 @@ import java.util.Date;
 import com.medlinx.ECGSignal;
 import com.medlinx.MlnxBTClient;
 import com.medlinx.MlnxEventListener;
+import com.medlinx.vstp.VstpAmplification;
+import com.medlinx.vstp.VstpDataType;
+import com.medlinx.vstp.VstpDeviceMode;
+import com.medlinx.vstp.VstpDevicePosition;
+import com.medlinx.vstp.VstpSamplingRate;
 
 
 
@@ -40,34 +45,30 @@ import android.widget.ToggleButton;
 public class MainActivity extends Activity {
 	protected static final String TAG = MainActivity.class.getName();
 	private ToggleButton switchButton;
-	private TextView status, message;
+	private TextView status, message, heartRate, deviceInfo;
 	private BluetoothAdapter mBluetoothAdapter;
 	// Intent request codes
     public static final int REQUEST_CONNECT_DEVICE = 1;
     public static final int REQUEST_ENABLE_BT = 2;
 	private ProgressDialog pro_dialog;
+	private int totalECGBytes;
 	
-//    private MlnxBTClient btClient = new MlnxBTClient(){
-//    	@Override
-//    	public void onECGSignalUpdate(ECGSignal ecg) {
-//    		float[][] data = ecg.getSignals();
-//    		String msg = "receive ecg data " + data.length + " points";
-//    		String currentDateTimeString = DateFormat.getDateTimeInstance().format(new Date());
-//            Log.i(TAG, currentDateTimeString + ":" + msg);
-//            status.setText(currentDateTimeString + ":" + msg);
-//    	}
-//    };
+
 	
-	private MlnxBTClient btClient = MlnxBTClient.getClient();
+	private MlnxBTClient btClient;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		// Init BT client
+		initBTClient();
+		
 		switchButton = (ToggleButton) findViewById(R.id.switchButton);
 		status = (TextView) findViewById(R.id.status);
 		message = (TextView) findViewById(R.id.message);
-		
+		heartRate = (TextView) findViewById(R.id.heartrate);
+		deviceInfo = (TextView) findViewById(R.id.deviceInfo);
 		switchButton.setOnClickListener(new OnClickListener(){
 
 			@Override
@@ -91,11 +92,16 @@ public class MainActivity extends Activity {
         
         btClient.setOnEventListener(new MlnxEventListener(){
 
+        	/**
+        	 * this method will be called when ECG data is received. 
+        	 * @param ecg
+        	 */
 			@Override
 			public void onECGSignalUpdate(ECGSignal ecg) {
 				Log.i(TAG, "ECG signal updated");
 				float[][] data = ecg.getSignals();
-	    		final String msg = "receive ecg data " + data.length + " points";
+				totalECGBytes += data.length;
+	    		final String msg = "receive ecg data " + totalECGBytes + " points";
 	    		final String currentDateTimeString = DateFormat.getDateTimeInstance().format(new Date());
 	            Log.i(TAG, currentDateTimeString + ":" + msg);
 	            runOnUiThread(new Runnable(){
@@ -109,28 +115,83 @@ public class MainActivity extends Activity {
 	            
 			}
 
+			/**
+			 * this method will be called when the heart rate is updated.
+			 */
 			@Override
-			public void onHeartRateUpdate(int heartrate) {
-				// TODO Auto-generated method stub
-				
+			public void onHeartRateUpdate(final int heartrate) {
+				Log.i(TAG, "heartate: " + heartrate);
+				runOnUiThread(new Runnable(){
+
+					@Override
+					public void run() {
+						heartRate.setText("心率：" + 
+								(heartrate == 255 ? "未知" : heartrate)
+								);
+					}
+	            	
+	            });
 			}
 
+			/**
+			 * this method will be called when the battery of the Bluetooth device changes.
+			 * @param battery
+			 */
 			@Override
-			public void onBatteryRemainingChanged(int battery) {
-				// TODO Auto-generated method stub
-				
+			public void onBatteryRemainingChanged(final int battery) {
+				Log.i(TAG, "remaining battery: " + battery + "%");
+				runOnUiThread(new Runnable(){
+
+					@Override
+					public void run() {
+						deviceInfo.setText("设备剩余电量：" + battery + "%");
+					}
+	            	
+	            });
 			}
 
+			/**
+			 * this method will be called when the electrode of the Bluetooth device changes.
+			 * @param electrode: electrode connection status
+			 * 电极阻抗字节定义：<V6阻抗><V5阻抗><V4阻抗><V3阻抗><V2阻抗><V1阻抗><RL阻抗><RA阻抗><LL阻抗><LA阻抗>
+			 * 阻抗bits： 1：电极断开，阻抗无穷大；0：电极阻抗为0，正常；
+			 */
 			@Override
-			public void onElectrodeChanged(int electrode) {
-				// TODO Auto-generated method stub
-				
+			public void onElectrodeChanged(final int electrode) {
+				Log.i(TAG, "Electrode flags: " + electrode);
+				runOnUiThread(new Runnable(){
+
+					@Override
+					public void run() {
+						deviceInfo.setText("电极标志位：" + Integer.toBinaryString(electrode));
+					}
+	            	
+	            });
 			}
 
+
+			/**
+			 * this method will be called when the acceleration type is updated.
+			 * @param acceleration 这个字节目前只有最高位(MSB)和低三位有效，其中最高为如果为1表示病人正在运动，0表示病人静止。
+			 * 最低三位表示病人姿态，这个和设备佩带的方式有关。我们目前暂定：
+			 * 000 或 001或010或011：病人站立 （实际上010和011是倒立。。。但是正常病人不会倒立，目前姑且认为也是站立。。。）
+			 * 100：病人左侧卧
+			 * 101：病人右侧卧
+			 * 110：病人平躺
+			 * 111：病人俯卧
+			 */
 			@Override
-			public void onAccelerationUpdate(int acceleration) {
-				// TODO Auto-generated method stub
-				
+			public void onDevicePositionChanged(
+					final VstpDevicePosition devicePosition) {
+				Log.i(TAG, "device position changed: " + devicePosition);
+				runOnUiThread(new Runnable(){
+
+					@Override
+					public void run() {
+						deviceInfo.setText("设备位置：" + devicePosition);
+					}
+	            	
+	            });
 			}
         	
         });
@@ -139,7 +200,19 @@ public class MainActivity extends Activity {
 	
 
 	
-    @Override
+    private void initBTClient() {
+    	btClient = MlnxBTClient.getClient();
+		btClient.setDeviceId("bluetooth_device");
+		btClient.setPatientId(1);
+		btClient.setDataType(VstpDataType.ECG_8CH);
+		btClient.setAmplification(VstpAmplification._1X.getValue());
+		btClient.setSamplingRate(VstpSamplingRate._300Hz.getValue());
+		btClient.setDeviceMode(VstpDeviceMode.ECG_ADVANCED);
+	}
+
+
+
+	@Override
 	protected void onDestroy() {
     	super.onDestroy();
 	}
