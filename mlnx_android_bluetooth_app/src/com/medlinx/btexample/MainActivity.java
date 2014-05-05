@@ -6,11 +6,9 @@ import java.util.Date;
 import com.medlinx.ECGSignal;
 import com.medlinx.MlnxBTClient;
 import com.medlinx.MlnxEventListener;
-import com.medlinx.vstp.VstpAmplification;
 import com.medlinx.vstp.VstpDataType;
 import com.medlinx.vstp.VstpDeviceMode;
 import com.medlinx.vstp.VstpDevicePosition;
-import com.medlinx.vstp.VstpSamplingRate;
 
 
 
@@ -33,7 +31,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.View;
@@ -44,7 +41,7 @@ import android.widget.ToggleButton;
 
 public class MainActivity extends Activity {
 	protected static final String TAG = MainActivity.class.getName();
-	private ToggleButton switchButton;
+	private ToggleButton switchButton, dataTransfer;
 	private TextView status, message, heartRate, deviceInfo;
 	private BluetoothAdapter mBluetoothAdapter;
 	// Intent request codes
@@ -77,12 +74,35 @@ public class MainActivity extends Activity {
 					// connecting
 					Log.i(TAG, "connection");
 					connectBT();
+					setDataTransferButton(true);
 				}else{
 					Log.i(TAG, "disconnection");
 					disconnectBT();
+					setDataTransferButton(false);
 				}
 				
 			}});
+		
+		dataTransfer = (ToggleButton) findViewById(R.id.dataTransfer);
+		dataTransfer.setOnClickListener(new OnClickListener(){
+
+			@Override
+			public void onClick(View v) {
+				if(switchButton.isChecked()){
+					if(dataTransfer.isChecked()){
+						// turn it on
+						btClient.setDataTransferState(true);
+					}else{
+						// turn it off
+						btClient.setDataTransferState(false);
+					}
+				}else{
+					// When BT disconnects, dataTransfer is always unchecked
+					setDataTransferButton(false);
+				}
+			}
+			
+		});
 		
 		// bluetooth
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -91,6 +111,21 @@ public class MainActivity extends Activity {
         registerReceiver(btStatetReceiver, filter );
         
         btClient.setOnEventListener(new MlnxEventListener(){
+        	/**
+        	 * Mlnx device enters data transfer mode. 数据传输开始
+        	 */
+        	public void onResume(){
+        		setDataTransferButton(true);
+        		
+        	}
+        	
+        	/**
+        	 * Mlnx device enters idle mode. 数据传输停止，但是保持蓝牙连接
+        	 */
+        	public void onIdle(){
+        		setDataTransferButton(false);
+        		
+        	}
 
         	/**
         	 * this method will be called when ECG data is received. 
@@ -199,15 +234,24 @@ public class MainActivity extends Activity {
 	}
 	
 
+	private void setDataTransferButton(final boolean checked){
+		this.runOnUiThread(new Runnable(){
+
+			@Override
+			public void run() {
+				dataTransfer.setChecked(checked);
+				if(checked)
+					Toast.makeText(getApplicationContext(), "数据传输开始", Toast.LENGTH_LONG).show();
+				else
+					Toast.makeText(getApplicationContext(), "数据传输停止", Toast.LENGTH_LONG).show();
+			}
+			
+		});
+	}
+	
 	
     private void initBTClient() {
-    	btClient = MlnxBTClient.getClient();
-		btClient.setDeviceId("bluetooth_device");
-		btClient.setPatientId(1);
-		btClient.setDataType(VstpDataType.ECG_8CH);
-		btClient.setAmplification(VstpAmplification._1X.getValue());
-		btClient.setSamplingRate(VstpSamplingRate._300Hz.getValue());
-		btClient.setDeviceMode(VstpDeviceMode.ECG_ADVANCED);
+    	btClient = MlnxBTClient.getClient(1, VstpDeviceMode.ECG_ADVANCED, VstpDataType.ECG_8CH);
 	}
 
 

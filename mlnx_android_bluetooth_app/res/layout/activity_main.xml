@@ -29,38 +29,6 @@
         android:text="@string/connect" />
 
     <TextView
-        android:id="@+id/message"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_above="@+id/textView2"
-        android:layout_alignLeft="@+id/textView1"
-        android:layout_alignRight="@+id/switchButton"
-        android:layout_below="@+id/switchButton"
-        android:layout_marginTop="20dp"
-        android:text=""
-        android:textAppearance="?android:attr/textAppearanceSmall" />
-
-    <TextView
-        android:id="@+id/textView2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/status"
-        android:layout_below="@+id/switchButton"
-        android:layout_marginTop="20dp"
-        android:text="@string/status_title"
-        android:textAppearance="?android:attr/textAppearanceMedium" />
-
-    <TextView
-        android:id="@+id/status"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_below="@+id/textView2"
-        android:layout_marginLeft="50dp"
-        android:layout_marginTop="20dp"
-        android:text="@string/status" />
-
-    <TextView
         android:id="@+id/heartrate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -76,5 +44,51 @@
         android:layout_alignLeft="@+id/status"
         android:layout_centerVertical="true"
         android:text="" />
+
+    <TextView
+        android:id="@+id/message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/textView1"
+        android:layout_alignTop="@+id/switchButton"
+        android:textAppearance="?android:attr/textAppearanceSmall" />
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/deviceInfo"
+        android:layout_alignLeft="@+id/deviceInfo"
+        android:layout_marginBottom="44dp"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:text="数据传输：" />
+
+    <ToggleButton
+        android:id="@+id/dataTransfer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/textView3"
+        android:layout_alignBottom="@+id/textView3"
+        android:layout_alignRight="@+id/status"
+        android:checked="false"
+        android:text="ToggleButton" />
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@+id/status"
+        android:layout_below="@+id/deviceInfo"
+        android:text="@string/status_title"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+        android:id="@+id/status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="45dp"
+        android:text="@string/status" />
 
 </RelativeLayout>
