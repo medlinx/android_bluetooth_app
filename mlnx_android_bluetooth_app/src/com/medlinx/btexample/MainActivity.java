@@ -241,9 +241,9 @@ public class MainActivity extends Activity {
 			public void run() {
 				dataTransfer.setChecked(checked);
 				if(checked)
-					Toast.makeText(getApplicationContext(), "数据传输开始", Toast.LENGTH_LONG).show();
+					Toast.makeText(getApplicationContext(), "数据传输开始", Toast.LENGTH_SHORT).show();
 				else
-					Toast.makeText(getApplicationContext(), "数据传输停止", Toast.LENGTH_LONG).show();
+					Toast.makeText(getApplicationContext(), "数据传输停止", Toast.LENGTH_SHORT).show();
 			}
 			
 		});
@@ -317,6 +317,7 @@ public class MainActivity extends Activity {
                 	if(pro_dialog != null)
                 		pro_dialog.dismiss();
                 	switchButton.setChecked(false);
+                	setDataTransferButton(false);
                 	if(intent.hasExtra(MlnxBTClient.BT_STATE_CHANGE_MSG))
                 		text = intent.getExtras().getString(MlnxBTClient.BT_STATE_CHANGE_MSG); 
                     
